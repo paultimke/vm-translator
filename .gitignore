@@ -1,0 +1,8 @@
+build/
+_build/
+.cache
+a.out*
+.vscode
+.DS_Store
+compile_commands.json
+.clangd

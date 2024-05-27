@@ -1,0 +1,8 @@
+// Test file 1
+push constant 3
+pop local 2
+
+// Add them together
+add
+eq
+not
