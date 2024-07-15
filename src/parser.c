@@ -8,14 +8,21 @@
 #include "keywords.h"
 #include "errorHandler.h"
 
-#define ARG_1    (1)
-#define ARG_2    (2)
+#define ARG_1           (1)
+#define ARG_2           (2)
+
+#define PUSH_STRLEN     (4)
+#define POP_STRLEN      (3)
+#define LABEL_STRLEN    (5)
+#define GOTO_STRLEN     (4)
+#define IF_GOTO_STRLEN  (7)
 
 // Local function prototypes
 static ErrorCode readInputFile(Parser* p, const char* fileName);
 static ErrorCode parser_parseComment(Parser* p);
 static ErrorCode parser_parseArg(Parser* p, int arg);
-static ErrorCode parser_parsePushPop(Parser* p);
+static ErrorCode parser_parseOneArgCommand(Parser* p, CommandType cmdType);
+static ErrorCode parser_parseTwoArgCommand(Parser* p, CommandType cmdType);
 static bool isEOF(Parser* p);
 static bool isEOL(Parser* p);
 static uint32_t str2int(const char* str, size_t len);
@@ -28,6 +35,20 @@ static bool isValidSymbolStart(const char c);
 static bool isValidSymbolChar(const char c);
 static bool lineStartsWith(Parser* p, const char* str);
 
+const char* commandKeywords[CMD_MAX_COMMANDS] = {
+    "",         // CMD_UNDEFINED
+    "",         // CMD_ARITHMETIC (varies with each one)
+    "push",     // CMD_PUSH
+    "pop",      // CMD_POP
+    "label",    // CMD_LABEL
+    "goto",     // CMD_GOTO
+    "if-goto",  // CMD_IF
+    "function", // CMD_FUNCTION
+    "return",   // CMD_RETURN
+    "call",     // CMD_CALL
+    ""          // CMD_END
+};
+
 // ---------------------------- PUBLIC FUNCTIONS --------------------------- //
 ErrorCode parser_new(Parser* p, const char* fileName)
 {
@@ -38,6 +59,7 @@ ErrorCode parser_new(Parser* p, const char* fileName)
     p->contentLen = strlen(p->content);
     p->lineNumber = 1;
     p->cursor = 0;
+    p->currCmd.type = CMD_UNDEFINED;
     return OK;
 }
 
@@ -66,6 +88,7 @@ ErrorCode parser_advance(Parser* p)
             break; 
         }
 
+        // Comments
         if (p->content[p->cursor] == '/') {
             parser_consumeChar(p);
             err = parser_parseComment(p);
@@ -74,10 +97,30 @@ ErrorCode parser_advance(Parser* p)
             }
             continue;
         }
-
         // Memory Segment Commands
-        if (p->content[p->cursor] == 'p') {
-            return parser_parsePushPop(p);
+        else if (lineStartsWith(p, "push")) {
+            return parser_parseTwoArgCommand(p, CMD_PUSH);
+        }
+        else if (lineStartsWith(p, "pop")) {
+            return parser_parseTwoArgCommand(p, CMD_POP);
+        }
+        // Branching commands
+        else if (lineStartsWith(p, "label")) {
+            return parser_parseOneArgCommand(p, CMD_LABEL);
+        }
+        else if (lineStartsWith(p, "goto")) {
+            return parser_parseOneArgCommand(p, CMD_GOTO);
+        }
+        else if (lineStartsWith(p, "if-goto")) {
+            return parser_parseOneArgCommand(p, CMD_IF);
+        }
+
+        // Functions
+        else if (p->content[p->cursor] == 'f') {
+        }
+        else if (p->content[p->cursor] == 'c') {
+        }
+        else if (p->content[p->cursor] == 'r') {
         }
 
         // Arithmetic commands
@@ -182,6 +225,8 @@ static void parser_trimLeftInline(Parser *p)
     }
 }
 
+/// @brief Consumes current character pointed at by the parser
+/// and advances to the next character.
 static void parser_consumeChar(Parser *p)
 {
     if (p->cursor >= p->contentLen)
@@ -194,6 +239,8 @@ static void parser_consumeChar(Parser *p)
     p->cursor += 1;
 }
 
+/// @brief Returns true if current text pointed at by the parser
+/// starts with the given string str. False otherwise
 static bool lineStartsWith(Parser* p, const char* str)
 {
     size_t len = strlen(str);
@@ -218,6 +265,11 @@ static ErrorCode parser_parseComment(Parser* p)
     return OK;
 }
 
+/// @brief Parses the arguments of the current command and places them
+/// on the p->currCmd.Arg1 and p->currCmd.Arg2 fields for the given parser.
+/// In case of an arithmetic command, Arg1 holds the name of the command
+/// itself.
+/// In all other cases, it holds actual arguments like labels or constants
 static ErrorCode parser_parseArg(Parser* p, int arg)
 {
     uint64_t argStart = p->cursor;
@@ -244,25 +296,11 @@ static ErrorCode parser_parseArg(Parser* p, int arg)
     return OK;
 }
 
-static ErrorCode parser_parsePushPop(Parser* p)
+static ErrorCode parser_parseOneArgCommand(Parser* p, CommandType cmdType)
 {
-    ErrorCode err = ERR_UNKNOWN;
-    CommandType cmdType = CMD_UNDEFINED;
-    if (lineStartsWith(p, "push")) {
-        cmdType = CMD_PUSH;
-        for (int i = 0; i < 4; i++) {
-            parser_consumeChar(p);
-        }
-    }
-    else if (lineStartsWith(p, "pop")) {
-        cmdType = CMD_POP;
-        for (int i = 0; i < 3; i++) {
-            parser_consumeChar(p);
-        }
-    }
-    else {
-        parser_logError(p, ERR_UNEXPEC_TOKEN);
-        return ERR_UNEXPEC_TOKEN;
+    int commandLen = strlen(commandKeywords[cmdType]);
+    for (int i = 0; i < commandLen; i++) {
+        parser_consumeChar(p);
     }
 
     // Assert space is given after the command
@@ -271,16 +309,46 @@ static ErrorCode parser_parsePushPop(Parser* p)
         return ERR_UNEXPEC_TOKEN;
     }
     parser_trimLeftInline(p);
+
+    ErrorCode err = parser_parseArg(p, ARG_2);
+    if (err != OK) return err;
+
+    p->currCmd.type = cmdType;
+    return OK;
+}
+
+static ErrorCode parser_parseTwoArgCommand(Parser* p, CommandType cmdType)
+{
+    ErrorCode err = ERR_UNKNOWN;
+
+    int commandLen = strlen(commandKeywords[cmdType]);
+    if (commandLen == 0) {
+        p->currCmd.type = CMD_UNDEFINED;
+        parser_logError(p, ERR_UNEXPEC_TOKEN);
+        return ERR_UNEXPEC_TOKEN;
+    }
+    for (int i = 0; i < commandLen; i++) {
+        parser_consumeChar(p);
+    }
+
+    // Assert space is given after the command
+    if (!isInlineSpace(p->content[p->cursor])) {
+        parser_logError(p, ERR_UNEXPEC_TOKEN);
+        return ERR_UNEXPEC_TOKEN;
+    }
+    parser_trimLeftInline(p);
+
     // Parse first argument
     err = parser_parseArg(p, ARG_1);
     if (err != OK) return err;
 
-    // Assert space is given after the command
+    // Assert space is given after the first arg
     if (!isInlineSpace(p->content[p->cursor])) {
         parser_logError(p, ERR_UNEXPEC_TOKEN);
         return ERR_UNEXPEC_TOKEN;
     }
     parser_trimLeftInline(p);
+
     // Parse second argument
     err = parser_parseArg(p, ARG_2);
     if (err != OK) return err;
