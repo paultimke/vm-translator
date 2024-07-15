@@ -11,7 +11,7 @@ set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 add_subdirectory(src)
 
 message("Build type is ${CMAKE_BUILD_TYPE}")
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Test")
     enable_testing()
     add_subdirectory(test)
 endif()

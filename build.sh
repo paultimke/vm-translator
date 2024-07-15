@@ -9,6 +9,15 @@ function buildDebug() {
     cd ${CURR_DIR}
 }
 
+function buildTest() {
+    CURR_DIR=$(pwd)
+    cmake -S . -B _build/Debug -DCMAKE_BUILD_TYPE=Test || return $?
+    cmake --build _build/Debug || return $?
+    cd _build/Debug && make install || return $?
+    mv compile_commands.json ${CURR_DIR}
+    cd ${CURR_DIR}
+}
+
 if [[ $# == 0 ]]; then
     buildDebug
 elif [[ $# == 1 ]]; then
@@ -25,9 +34,13 @@ elif [[ $# == 1 ]]; then
         cd _build/Release && make install || exit $?
         cd ..
     elif [[ $1 == "test" ]]; then
-        buildDebug || exit $?
+        buildTest || exit $?
         ./_build/Debug/test/vm-translator-tests || exit $?
+    else
+        echo "Unrecognized command $1"
+        exit 1
     fi
 else
     echo "run as ./build.sh or ./build.sh <arg>"
+    exit 1
 fi

@@ -17,6 +17,9 @@ target_link_libraries(${THIS} PUBLIC
     vm-translatorlib
 )
 
+# Add THIS_IS_TEST flag when testing to disable logging to stdout
+target_compile_definitions(${PROJECT_NAME}lib PUBLIC THIS_IS_TEST)
+
 add_test(
     NAME ${THIS}
     COMMAND ${THIS}

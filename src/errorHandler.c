@@ -7,7 +7,7 @@
 
 void logError(ErrorCode err, const char* msg)
 {
-#ifndef TEST
+#ifndef THIS_IS_TEST
     switch (err) {
         case ERR_CANT_OPEN_INPUT_FILE:
         {
@@ -35,12 +35,12 @@ void logError(ErrorCode err, const char* msg)
         default:
             break;
     }
-#endif // ifndef TEST
+#endif // ifndef THIS_IS_TEST
 }
 
 void parser_logError(const Parser *p, ErrorCode err)
 {
-#ifndef TEST
+#ifndef THIS_IS_TEST
     switch (err) {
         case ERR_MAX_IDENTIFIER_LEN:
         {
@@ -60,5 +60,5 @@ void parser_logError(const Parser *p, ErrorCode err)
         default:
             break;
     }
-#endif // ifndef TEST
+#endif // ifndef THIS_IS_TEST
 }
