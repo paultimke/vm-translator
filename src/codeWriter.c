@@ -163,16 +163,16 @@ ErrorCode codeWriter_writePush(CodeWriter* cw, const Command* cmd)
     // Implementation for constant and pointer is different, so we return
     // early on either of them
     if (strcmp(cmd->Arg1, "constant") == 0) {
-        fprintf(cw->outputFile, "@%s\nD=A\n@SP\nA=M\nM=D\n@SP\nM=M+1\n", cmd->Arg2);
+        fprintf(cw->outputFile, "  @%s\n  D=A\n  @SP\n  A=M\n  M=D\n  @SP\n  M=M+1\n", cmd->Arg2);
         return OK;
     }
     else if (strcmp(cmd->Arg1, "pointer") == 0) {
         ErrorCode err = OK;
         if (strcmp(cmd->Arg2, "0") == 0) {
-            fprintf(cw->outputFile, "@SP\nA=M\nM=THIS\n@SP\nM=M+1\n");
+            fprintf(cw->outputFile, "  @SP\n  A=M\n  M=THIS\n  @SP\n  M=M+1\n");
         }
         else if (strcmp(cmd->Arg2, "1") == 0) {
-            fprintf(cw->outputFile, "@SP\nA=M\nM=THAT\n@SP\nM=M+1\n");
+            fprintf(cw->outputFile, "  @SP\n  A=M\n  M=THAT\n  @SP\n  M=M+1\n");
         }
         else {
             logError(ERR_PUSHPOP_PTR_NOT_0_OR_1, NULL);
@@ -187,29 +187,29 @@ ErrorCode codeWriter_writePush(CodeWriter* cw, const Command* cmd)
     // D=M for segments with indirect addressing (like local and this) and
     // D=A for segments with direct addressing like static and temp
     else if (strcmp(cmd->Arg1, "local") == 0) {
-        fprintf(cw->outputFile, "@LCL\nD=M\n");
+        fprintf(cw->outputFile, "  @LCL\n  D=M\n");
     }
     else if (strcmp(cmd->Arg1, "argument") == 0) {
-        fprintf(cw->outputFile, "@ARG\nD=M\n");
+        fprintf(cw->outputFile, "  @ARG\n  D=M\n");
     }
     else if (strcmp(cmd->Arg1, "this") == 0) {
-        fprintf(cw->outputFile, "@THIS\nD=M\n");
+        fprintf(cw->outputFile, "  @THIS\n  D=M\n");
     }
     else if (strcmp(cmd->Arg1, "that") == 0) {
-        fprintf(cw->outputFile, "@THAT\nD=M\n");
+        fprintf(cw->outputFile, "  @THAT\n  D=M\n");
     }
     else if (strcmp(cmd->Arg1, "temp") == 0) {
-        fprintf(cw->outputFile, "@5\nD=A\n");
+        fprintf(cw->outputFile, "  @5\n  D=A\n");
     }
     else if (strcmp(cmd->Arg1, "static") == 0) {
         char* baseFileName = codeWriter_getBaseFileName(cw);
-        fprintf(cw->outputFile, "@%s.%s\nD=A\n", baseFileName, cmd->Arg2);
+        fprintf(cw->outputFile, "  @%s.%s\n  D=A\n", baseFileName, cmd->Arg2);
         free(baseFileName);
     }
 
     // The rest of the code is the same
-    fprintf(cw->outputFile, "@%s\n", cmd->Arg2);
-    fprintf(cw->outputFile, "A=D+A\nD=M\n@SP\nA=M\nM=D\n@SP\nM=M+1\n");
+    fprintf(cw->outputFile, "  @%s\n", cmd->Arg2);
+    fprintf(cw->outputFile, "  A=D+A\n  D=M\n  @SP\n  A=M\n  M=D\n  @SP\n  M=M+1\n");
 
     return OK;
 }
@@ -221,16 +221,16 @@ static ErrorCode codeWriter_writePop(CodeWriter* cw, const Command* cmd)
     // Implementation for constant and pointer is different, so we return
     // early on either of them
     if (strcmp(cmd->Arg1, "constant") == 0) {
-        fprintf(cw->outputFile, "@SP\nM=M-1\nD=M\n@%s\nM=D\n", cmd->Arg2);
+        fprintf(cw->outputFile, "  @SP\n  M=M-1\n  D=M\n  @%s\n  M=D\n", cmd->Arg2);
         return OK;
     }
     else if (strcmp(cmd->Arg1, "pointer") == 0) {
         ErrorCode err = OK;
         if (strcmp(cmd->Arg2, "0") == 0) {
-            fprintf(cw->outputFile, "@SP\nM=M-1\nD=M\n@THIS\nM=D\n");
+            fprintf(cw->outputFile, "  @SP\n  M=M-1\n  D=M\n  @THIS\n  M=D\n");
         }
         else if (strcmp(cmd->Arg2, "1") == 0) {
-            fprintf(cw->outputFile, "@SP\nM=M-1\nD=M\n@THAT\nM=D\n");
+            fprintf(cw->outputFile, "  @SP\n  M=M-1\n  D=M\n  @THAT\n  M=D\n");
         }
         else {
             logError(ERR_PUSHPOP_PTR_NOT_0_OR_1, cmd->Arg1);
@@ -241,27 +241,27 @@ static ErrorCode codeWriter_writePop(CodeWriter* cw, const Command* cmd)
 
     // For all other segments:
     // First four lines are the same
-    fprintf(cw->outputFile, "@SP\nM=M-1\nA=M\nD=M\n");
+    fprintf(cw->outputFile, "  @SP\n  M=M-1\n  A=M\n  D=M\n");
 
     // Fifth line depends on the segment
     if (strcmp(cmd->Arg1, "local") == 0) {
-        fprintf(cw->outputFile, "@LCL\nD=D+M\n");
+        fprintf(cw->outputFile, "  @LCL\n  D=D+M\n");
     }
     else if (strcmp(cmd->Arg1, "argument") == 0) {
-        fprintf(cw->outputFile, "@ARG\nD=D+M\n");
+        fprintf(cw->outputFile, "  @ARG\n  D=D+M\n");
     }
     else if (strcmp(cmd->Arg1, "this") == 0) {
-        fprintf(cw->outputFile, "@THIS\nD=D+M\n");
+        fprintf(cw->outputFile, "  @THIS\n  D=D+M\n");
     }
     else if (strcmp(cmd->Arg1, "that") == 0) {
-        fprintf(cw->outputFile, "@THAT\nD=D+M\n");
+        fprintf(cw->outputFile, "  @THAT\n  D=D+M\n");
     }
     else if (strcmp(cmd->Arg1, "temp") == 0) {
-        fprintf(cw->outputFile, "@5\nD=D+A\n");
+        fprintf(cw->outputFile, "  @5\n  D=D+A\n");
     }
     else if (strcmp(cmd->Arg1, "static") == 0) {
         char* baseFileName = codeWriter_getBaseFileName(cw);
-        fprintf(cw->outputFile, "@%s.%s\nD=D+A\n", baseFileName, cmd->Arg2);
+        fprintf(cw->outputFile, "  @%s.%s\n  D=D+A\n", baseFileName, cmd->Arg2);
         free(baseFileName);
     }
     else {
@@ -270,8 +270,8 @@ static ErrorCode codeWriter_writePop(CodeWriter* cw, const Command* cmd)
     }
 
     // The rest of the code is the same
-    fprintf(cw->outputFile, "@%s\n", cmd->Arg2);
-    fprintf(cw->outputFile, "D=D+A\n@SP\nA=M\nA=M\nA=D-A\nM=D-A\n");
+    fprintf(cw->outputFile, "  @%s\n", cmd->Arg2);
+    fprintf(cw->outputFile, "  D=D+A\n  @SP\n  A=M\n  A=M\n  A=D-A\n  M=D-A\n");
 
     return OK;
 }
