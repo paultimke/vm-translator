@@ -116,11 +116,23 @@ ErrorCode parser_advance(Parser* p)
         }
 
         // Functions
-        else if (p->content[p->cursor] == 'f') {
+        else if (lineStartsWith(p, "function")) {
+            return parser_parseTwoArgCommand(p, CMD_FUNCTION);
         }
-        else if (p->content[p->cursor] == 'c') {
+        else if (lineStartsWith(p, "call")) {
+            return parser_parseTwoArgCommand(p, CMD_CALL);
         }
-        else if (p->content[p->cursor] == 'r') {
+        else if (lineStartsWith(p, "return")) {
+            // Return doesn't have any arguments
+            for (int i = 0; i < strlen("return"); i++) {
+                parser_consumeChar(p);
+            }
+            parser_trimLeftInline(p);
+            if (isEOF(p) || isEOL(p)) {
+                p->currCmd.type = CMD_RETURN;
+                return OK;
+            }
+            return ERR_UNEXPEC_TOKEN;
         }
 
         // Arithmetic commands
@@ -213,14 +225,14 @@ static uint32_t str2int(const char* str, size_t len)
 
 static void parser_trimLeft(Parser* p)
 {
-    while (isSpace(p->content[p->cursor])) {
+    while (!isEOF(p) && isSpace(p->content[p->cursor])) {
         parser_consumeChar(p);
     }
 }
 
 static void parser_trimLeftInline(Parser *p)
 {
-    while (isInlineSpace(p->content[p->cursor])) {
+    while (!isEOF(p) && isInlineSpace(p->content[p->cursor])) {
         p->cursor += 1;
     }
 }
@@ -296,6 +308,9 @@ static ErrorCode parser_parseArg(Parser* p, int arg)
     return OK;
 }
 
+/// @ brief Parses a one-argument command by identifying the type of command,
+/// verifying syntax is correct and placing the argument on the Arg2 field
+/// of the Command struct.
 static ErrorCode parser_parseOneArgCommand(Parser* p, CommandType cmdType)
 {
     int commandLen = strlen(commandKeywords[cmdType]);
@@ -310,13 +325,16 @@ static ErrorCode parser_parseOneArgCommand(Parser* p, CommandType cmdType)
     }
     parser_trimLeftInline(p);
 
-    ErrorCode err = parser_parseArg(p, ARG_2);
+    ErrorCode err = parser_parseArg(p, ARG_1);
     if (err != OK) return err;
 
     p->currCmd.type = cmdType;
     return OK;
 }
 
+/// @ brief Parses a two-argument command by identifying the type of command,
+/// verifying syntax is correct and placing the arguments on the respective
+/// Arg1 and Arg2 fields of the Command struct
 static ErrorCode parser_parseTwoArgCommand(Parser* p, CommandType cmdType)
 {
     ErrorCode err = ERR_UNKNOWN;

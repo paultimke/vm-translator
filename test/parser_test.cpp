@@ -82,3 +82,32 @@ TEST_F(ParserTests, GivenNoSpaceBetweenArgumentsThenParsingFails)
     err = parser_advance(&parserInstance);
     EXPECT_EQ(err, ERR_UNEXPEC_TOKEN);
 }
+
+TEST_F(ParserTests, GivenValidFunctionCommandThenParsingSucceeds)
+{
+    ErrorCode err;
+    const char* program = "    function functionName 3\n";
+    parser_setContent(program);
+
+    err = parser_advance(&parserInstance);
+    ASSERT_EQ(err, OK);
+    EXPECT_EQ(parserInstance.currCmd.type, CMD_FUNCTION);
+    EXPECT_STREQ(parserInstance.currCmd.Arg1, "functionName");
+    EXPECT_STREQ(parserInstance.currCmd.Arg2, "3");
+}
+
+TEST_F(ParserTests, GivenValidReturnCommandThenParsingSucceeds)
+{
+    ErrorCode err;
+    const char* program = "    return\n    return";
+    parser_setContent(program);
+
+    err = parser_advance(&parserInstance);
+    ASSERT_EQ(err, OK);
+    EXPECT_EQ(parserInstance.currCmd.type, CMD_RETURN);
+
+    err = parser_advance(&parserInstance);
+    ASSERT_EQ(err, OK);
+    EXPECT_EQ(parserInstance.currCmd.type, CMD_RETURN);
+}
+

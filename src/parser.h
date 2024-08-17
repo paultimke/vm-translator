@@ -52,10 +52,15 @@ ErrorCode parser_new(Parser* p, const char* fileName);
 /// @param p Pointer to a parser object
 ErrorCode parser_close(Parser* p);
 
+/// @brief Advances the parser by parsing each valid statement, populating
+/// the Command struct of the given parser object
 ErrorCode parser_advance(Parser* p);
 
 Command parser_getCurrentCommand(Parser* p);
 
+/// @brief Indicates whether the parsing of a source file pointed at by the
+/// given parser object has been completed or not.
+/// @return true if parsing not complete, false if parsing is complete
 bool parser_hasMoreCommands(Parser* p);
 
 #ifdef __cplusplus
