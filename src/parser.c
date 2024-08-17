@@ -142,6 +142,10 @@ ErrorCode parser_advance(Parser* p)
                 return parser_parseArg(p, ARG_1);
             }
         }
+
+        // If execution gets here, the command was not recognized
+        parser_logError(p, ERR_UNEXPEC_TOKEN);
+        return ERR_UNEXPEC_TOKEN;
     }
 
     p->currCmd.type = CMD_END;

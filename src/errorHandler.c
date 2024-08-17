@@ -51,9 +51,10 @@ void parser_logError(const Parser *p, ErrorCode err)
         }
         case ERR_UNEXPEC_TOKEN:
         {
-            printf("%sERROR. Unexpected token '%c'%s\n",
+            printf("%sERROR. Unexpected token '%c' on line %llu%s\n",
                     RED,
                     p->content[p->cursor],
+                    p->lineNumber,
                     RESET);
             break;
         }
