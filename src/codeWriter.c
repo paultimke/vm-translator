@@ -11,6 +11,9 @@
 static ErrorCode codeWriter_writeArithmetic(CodeWriter* cw, const Command* cmd);
 static ErrorCode codeWriter_writePush(CodeWriter* cw, const Command* cmd);
 static ErrorCode codeWriter_writePop(CodeWriter* cw, const Command* cmd);
+static ErrorCode codeWriter_writeLabel(CodeWriter* cw, const Command* cmd);
+static ErrorCode codeWriter_writeGoto(CodeWriter* cw, const Command* cmd);
+static ErrorCode codeWriter_writeIfGoto(CodeWriter* cw, const Command* cmd);
 static char* codeWriter_getBaseFileName(CodeWriter* cw);
 
 // -------------------------- PUBLIC FUNCTIONS ----------------------------- //
@@ -74,14 +77,20 @@ ErrorCode codeWriter_translateCmd(CodeWriter *cw, const Command *cmd)
         }
         case CMD_LABEL:
         {
+            err = codeWriter_writeLabel(cw, cmd);
+            if (err != OK) return err;
             break;
         }
         case CMD_GOTO:
         {
+            err = codeWriter_writeGoto(cw, cmd);
+            if (err != OK) return err;
             break;
         }
         case CMD_IF:
         {
+            err = codeWriter_writeIfGoto(cw, cmd);
+            if (err != OK) return err;
             break;
         }
         case CMD_FUNCTION:
@@ -273,6 +282,28 @@ static ErrorCode codeWriter_writePop(CodeWriter* cw, const Command* cmd)
     fprintf(cw->outputFile, "  @%s\n", cmd->Arg2);
     fprintf(cw->outputFile, "  D=D+A\n  @SP\n  A=M\n  A=M\n  A=D-A\n  M=D-A\n");
 
+    return OK;
+}
+
+static ErrorCode codeWriter_writeLabel(CodeWriter* cw, const Command* cmd)
+{
+    fprintf(cw->outputFile, "// label %s\n", cmd->Arg1);
+    fprintf(cw->outputFile, "(%s)\n", cmd->Arg1);
+    return OK;
+}
+
+static ErrorCode codeWriter_writeGoto(CodeWriter* cw, const Command* cmd)
+{
+    fprintf(cw->outputFile, "// goto %s\n", cmd->Arg1);
+    fprintf(cw->outputFile, "  @%s\n  0; JMP\n", cmd->Arg1);
+    return OK;
+}
+
+static ErrorCode codeWriter_writeIfGoto(CodeWriter* cw, const Command* cmd)
+{
+    fprintf(cw->outputFile, "// if-goto %s\n", cmd->Arg1);
+    fprintf(cw->outputFile, "  @SP\n  A=M-1\n  D=M\n");
+    fprintf(cw->outputFile, "  @%s\n  D; JGT\n", cmd->Arg1);
     return OK;
 }
 
