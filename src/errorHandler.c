@@ -17,6 +17,14 @@ void logError(ErrorCode err, const char* msg)
                     RESET);
             break;
         }
+        case ERR_CANT_OPEN_DIR:
+        {
+            printf("%sERROR. Could not open directory %s%s\n",
+                    RED,
+                    msg,
+                    RESET);
+            break;
+        }
         case ERR_FILENAME_NOT_VM:
         {
             printf("%sERROR. Please provide a file with .vm extension%s\n",

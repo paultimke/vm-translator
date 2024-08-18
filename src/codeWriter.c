@@ -2,10 +2,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "codeWriter.h"
 #include "errorHandler.h"
 #include "keywords.h"
 #include "parser.h"
+#include "codeWriter.h"
 
 ///////////////////////////////////////////////////////////
 // Macros and defines
@@ -36,15 +36,22 @@ static char* codeWriter_getBaseFileName(CodeWriter* cw);
 ///////////////////////////////////////////////////////////
 // PUBLIC FUNCTIONS
 ///////////////////////////////////////////////////////////
-ErrorCode codeWriter_new(CodeWriter *cw, const char* fileName)
+ErrorCode codeWriter_new(CodeWriter *cw, const char* fileName, FileType fileType)
 {
-    // Assert the file has a .vm extension
-    if (strcmp(&fileName[strlen(fileName) - 3], ".vm") != 0) {
-        logError(ERR_FILENAME_NOT_VM, NULL);
-        exit(ERR_FILENAME_NOT_VM);
+    char* fileExtension = "";
+
+    // Assert the file has a .vm extension if it is a regular file
+    if (FILE_REGULAR == fileType) {
+        if (strcmp(&fileName[strlen(fileName) - 3], ".vm") != 0) {
+            logError(ERR_FILENAME_NOT_VM, NULL);
+            exit(ERR_FILENAME_NOT_VM);
+        }
+
+        fileExtension = "vm";
     }
 
-    cw->fileNameLen = strlen(fileName) - strlen("vm") + strlen("asm");
+    // Allocate memory for the file name
+    cw->fileNameLen = strlen(fileName) - strlen(fileExtension) + strlen("asm");
     cw->fileName = malloc(cw->fileNameLen);
     if (!cw->fileName) {
         logError(ERR_PROG_OUT_OF_MEMORY, NULL);
@@ -52,7 +59,12 @@ ErrorCode codeWriter_new(CodeWriter *cw, const char* fileName)
     }
 
     // Replace the filename extension
-    strncpy(cw->fileName, fileName, strlen(fileName) - strlen(".vm"));
+    if (FILE_REGULAR == fileType) {
+        strncpy(cw->fileName, fileName, strlen(fileName) - strlen(".vm"));
+    }
+    else if (FILE_DIR == fileType) {
+        strncpy(cw->fileName, fileName, strlen(fileName));
+    }
     strcpy(&cw->fileName[strlen(cw->fileName)], ".asm");
 
     cw->outputFile = fopen(cw->fileName, "w");
@@ -67,8 +79,10 @@ void codeWriter_close(CodeWriter *cw)
 {
     assert(cw->fileName != NULL);
     free(cw->fileName);
+    cw->fileName = NULL;
     if (cw->outputFile) {
         fclose(cw->outputFile);
+        cw->outputFile = NULL;
     }
 }
 

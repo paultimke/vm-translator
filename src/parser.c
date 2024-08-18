@@ -63,12 +63,12 @@ ErrorCode parser_new(Parser* p, const char* fileName)
     return OK;
 }
 
-ErrorCode parser_close(Parser* p)
+void parser_close(Parser* p)
 {
-    assert(p->content != NULL);
-    free((char*)p->content);
-    p->content = NULL;
-    return OK;
+    if (p->content != NULL) {
+        free((char*)p->content);
+        p->content = NULL;
+    }
 }
 
 bool parser_hasMoreCommands(Parser* p)

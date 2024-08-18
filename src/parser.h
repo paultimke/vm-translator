@@ -50,7 +50,7 @@ ErrorCode parser_new(Parser* p, const char* fileName);
 
 /// @brief Frees allocated memory
 /// @param p Pointer to a parser object
-ErrorCode parser_close(Parser* p);
+void parser_close(Parser* p);
 
 /// @brief Advances the parser by parsing each valid statement, populating
 /// the Command struct of the given parser object

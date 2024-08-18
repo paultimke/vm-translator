@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include "main.h"
 #include "errorHandler.h"
 #include "parser.h"
 #include <stdio.h>
@@ -16,7 +17,7 @@ typedef struct CodeWriter {
 } CodeWriter;
 
 
-ErrorCode codeWriter_new(CodeWriter *cw, const char* fileName);
+ErrorCode codeWriter_new(CodeWriter *cw, const char* fileName, FileType fileType);
 void codeWriter_close(CodeWriter *cw);
 ErrorCode codeWriter_translateCmd(CodeWriter* cw, const Command* cmd);
 
