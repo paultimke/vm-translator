@@ -7,7 +7,21 @@
 #include "keywords.h"
 #include "parser.h"
 
+///////////////////////////////////////////////////////////
+// Macros and defines
+///////////////////////////////////////////////////////////
+
+// The following are very common operations throughout the program, so macros were defined
+#define GENERATE_PUSH_CONSTANT_CODE(file, constant)    \
+    fprintf(file, "    @%s\n    D=A\n    @SP\n    A=M\n    M=D\n    @SP\n    M=M+1\n", (constant))
+
+#define GENERATE_LABEL_DECLARATION_CODE(file, labelName)    fprintf(file, "(%s)\n", (labelName))
+
+#define GENERATE_GOTO_CODE(file, labelName)                 fprintf(file, "    @%s\n    0; JMP\n", (labelName))
+
+///////////////////////////////////////////////////////////
 // Local file-scoped functions and variables
+///////////////////////////////////////////////////////////
 static ErrorCode codeWriter_writeArithmetic(CodeWriter* cw, const Command* cmd);
 static ErrorCode codeWriter_writePush(CodeWriter* cw, const Command* cmd);
 static ErrorCode codeWriter_writePop(CodeWriter* cw, const Command* cmd);
@@ -16,9 +30,12 @@ static ErrorCode codeWriter_writeGoto(CodeWriter* cw, const Command* cmd);
 static ErrorCode codeWriter_writeIfGoto(CodeWriter* cw, const Command* cmd);
 static ErrorCode codeWriter_writeFunction(CodeWriter* cw, const Command* cmd);
 static ErrorCode codeWriter_writeFunctionCall(CodeWriter* cw, const Command* cmd);
+static ErrorCode codeWriter_writeReturn(CodeWriter* cw, const Command* cmd);
 static char* codeWriter_getBaseFileName(CodeWriter* cw);
 
-// -------------------------- PUBLIC FUNCTIONS ----------------------------- //
+///////////////////////////////////////////////////////////
+// PUBLIC FUNCTIONS
+///////////////////////////////////////////////////////////
 ErrorCode codeWriter_new(CodeWriter *cw, const char* fileName)
 {
     // Assert the file has a .vm extension
@@ -98,14 +115,19 @@ ErrorCode codeWriter_translateCmd(CodeWriter *cw, const Command *cmd)
         case CMD_FUNCTION:
         {
             err = codeWriter_writeFunction(cw, cmd);
+            if (err != OK) return err;
             break;
         }
         case CMD_CALL:
         {
+            err = codeWriter_writeFunctionCall(cw, cmd);
+            if (err != OK) return err;
             break;
         }
         case CMD_RETURN:
         {
+            err = codeWriter_writeReturn(cw, cmd);
+            if (err != OK) return err;
             break;
         }
         default:
@@ -119,19 +141,19 @@ ErrorCode codeWriter_writeArithmetic(CodeWriter* cw, const Command* cmd)
 {
     char* str;
     if (strcmp(cmd->Arg1, "add") == 0) {
-        str = "//   add\n    @SP\n    AM=M-1\n    D=M\n    @SP\n    M=M-1\n    A=M\n    M=M+D\n    @SP\n    M=M+1\n";
+        str = "// add\n    @SP\n    AM=M-1\n    D=M\n    @SP\n    M=M-1\n    A=M\n    M=M+D\n    @SP\n    M=M+1";
         fprintf(cw->outputFile, "%s\n", str);
     }
     else if (strcmp(cmd->Arg1, "sub") == 0) {
-        str = "// sub\n    @SP\n    AM=M-1\n    D=M\n    @SP\n    M=M-1\n    A=M\n    M=M-D\n    @SP\n    M=M+1\n";
+        str = "// sub\n    @SP\n    AM=M-1\n    D=M\n    @SP\n    M=M-1\n    A=M\n    M=M-D\n    @SP\n    M=M+1";
         fprintf(cw->outputFile, "%s\n", str);
     }
     else if (strcmp(cmd->Arg1, "neg") == 0) {
-        str = "// neg\n    @SP\n    A=M-1\n    M=-M\n";
+        str = "// neg\n    @SP\n    A=M-1\n    M=-M";
         fprintf(cw->outputFile, "%s\n", str);
     }
     else if (strcmp(cmd->Arg1, "eq") == 0) {
-        str = "// eq\n    @SP\n    AM=M-1\n    D=M\n    A=A-1\n    D=D-M\n    M=D\n";
+        str = "// eq\n    @SP\n    AM=M-1\n    D=M\n    A=A-1\n    D=D-M\n    M=D";
         fprintf(cw->outputFile, "%s\n", str);
     }
     else if (strcmp(cmd->Arg1, "gt") == 0) {
@@ -153,15 +175,15 @@ ErrorCode codeWriter_writeArithmetic(CodeWriter* cw, const Command* cmd)
         lt_jump_count++;
     }
     else if (strcmp(cmd->Arg1, "and") == 0) {
-        str = "//   and\n    @SP\n    AM=M-1\n    D=M\n    A=A-1\n    D=D&M\n    M=D\n";
+        str = "//   and\n    @SP\n    AM=M-1\n    D=M\n    A=A-1\n    D=D&M\n    M=D";
         fprintf(cw->outputFile, "%s\n", str);
     }
     else if (strcmp(cmd->Arg1, "or") == 0) {
-        str = "//   or\n    @SP\n    AM=M-1\n    D=M\n    A=A-1\n    D=D|M\n    M=D\n";
+        str = "//   or\n    @SP\n    AM=M-1\n    D=M\n    A=A-1\n    D=D|M\n    M=D";
         fprintf(cw->outputFile, "%s\n", str);
     }
     else if (strcmp(cmd->Arg1, "not") == 0) {
-        str = "//   not\n    @SP\n    A=M-1\n    M=!M\n";
+        str = "//   not\n    @SP\n    A=M-1\n    M=!M";
         fprintf(cw->outputFile, "%s\n", str);
     }
     
@@ -175,7 +197,7 @@ ErrorCode codeWriter_writePush(CodeWriter* cw, const Command* cmd)
     // Implementation for constant and pointer is different, so we return
     // early on either of them
     if (strcmp(cmd->Arg1, "constant") == 0) {
-        fprintf(cw->outputFile, "    @%s\n    D=A\n    @SP\n    A=M\n    M=D\n    @SP\n    M=M+1\n", cmd->Arg2);
+        GENERATE_PUSH_CONSTANT_CODE(cw->outputFile, cmd->Arg2);
         return OK;
     }
     else if (strcmp(cmd->Arg1, "pointer") == 0) {
@@ -291,14 +313,14 @@ static ErrorCode codeWriter_writePop(CodeWriter* cw, const Command* cmd)
 static ErrorCode codeWriter_writeLabel(CodeWriter* cw, const Command* cmd)
 {
     fprintf(cw->outputFile, "// label %s\n", cmd->Arg1);
-    fprintf(cw->outputFile, "(%s)\n", cmd->Arg1);
+    GENERATE_LABEL_DECLARATION_CODE(cw->outputFile, cmd->Arg1);
     return OK;
 }
 
 static ErrorCode codeWriter_writeGoto(CodeWriter* cw, const Command* cmd)
 {
     fprintf(cw->outputFile, "// goto %s\n", cmd->Arg1);
-    fprintf(cw->outputFile, "    @%s\n    0; JMP\n", cmd->Arg1);
+    GENERATE_GOTO_CODE(cw->outputFile, cmd->Arg1);
     return OK;
 }
 
@@ -312,16 +334,115 @@ static ErrorCode codeWriter_writeIfGoto(CodeWriter* cw, const Command* cmd)
 
 static ErrorCode codeWriter_writeFunction(CodeWriter* cw, const Command* cmd)
 {
-    fprintf(cw->outputFile, "// function %s %s\n", cmd->Arg1, cmd->Arg2);
-    fprintf(cw->outputFile, "(%s)\n", cmd->Arg1);
+    fprintf(cw->outputFile, "\n// function %s %s\n", cmd->Arg1, cmd->Arg2);
+    GENERATE_LABEL_DECLARATION_CODE(cw->outputFile, cmd->Arg1);
 
     // Convert nVars argument from string to integer
     int nVars = atoi(cmd->Arg2);
     for (int i = 0; i < nVars; i++) {
         // Push 0 nVars times into the stack
-        fprintf(cw->outputFile, "    @0\n    D=A\n    @SP\n    A=M\n    M=D\n    @SP\n    M=M+1\n");
+        GENERATE_PUSH_CONSTANT_CODE(cw->outputFile, "0");
     }
 
+    return OK;
+}
+
+static ErrorCode codeWriter_writeFunctionCall(CodeWriter* cw, const Command* cmd)
+{
+    fprintf(cw->outputFile, "\n// call %s %s\n", cmd->Arg1, cmd->Arg2);
+
+    // Return address label will be the function name appended by _retAddr
+    char* retAddrLabel = malloc(sizeof(char) * (strlen(cmd->Arg1) + strlen("_retAddr")));
+    if (retAddrLabel == NULL) {
+        logError(ERR_PROG_OUT_OF_MEMORY, NULL);
+        return ERR_PROG_OUT_OF_MEMORY;
+    }
+    sprintf(retAddrLabel, "%s_retAddr", cmd->Arg1);
+
+    // Push the return address onto the stack
+    GENERATE_PUSH_CONSTANT_CODE(cw->outputFile, retAddrLabel);
+
+    // Push the caller's segment pointers into the stack
+    fprintf(cw->outputFile, "    @LCL\n    D=M\n    @SP\n    A=M\n    M=D\n    @SP\n    M=M+1\n");
+    fprintf(cw->outputFile, "    @ARG\n    D=M\n    @SP\n    A=M\n    M=D\n    @SP\n    M=M+1\n");
+    fprintf(cw->outputFile, "    @THIS\n    D=M\n    @SP\n    A=M\n    M=D\n    @SP\n    M=M+1\n");
+    fprintf(cw->outputFile, "    @THAT\n    D=M\n    @SP\n    A=M\n    M=D\n    @SP\n    M=M+1\n");
+
+    // Reposition ARG. Subtract 5 because we just pushed 5 things.
+    // We also need to subtract nArgs because that is the address where
+    // the arguments start
+    // *ARG = *SP - 5 - nArgs, but we can do (5+nArgs) locally and write
+    // the result, so it is now *ARG = *SP - (5 + nArgs)
+    const int subtractValue = 5 + atoi(cmd->Arg2);
+    // @SP
+    // D=M    // D = *SP = RAM[0]
+    // @subtractValue
+    // D=D-A  // D = *SP - 5 - nArgs
+    // @ARG
+    // M=D    // *ARG = D = RAM[ARG] 
+    fprintf(cw->outputFile, "    @SP\n    D=M\n    @%d\n", subtractValue);
+    fprintf(cw->outputFile, "    D=D-A\n    @ARG\n    M=D\n");
+
+    // Reposition LCL to the top of the stack
+    // *LCL = SP
+    // which is:
+    // @SP
+    // D=M
+    // @LCL
+    // M=D
+    fprintf(cw->outputFile, "    @SP\n    D=M\n    @LCL\n    M=D\n");
+
+    // Transfer control to called function (goto <functionName>)
+    GENERATE_GOTO_CODE(cw->outputFile, cmd->Arg1);
+
+    // Write the return label declaration to the file
+    GENERATE_LABEL_DECLARATION_CODE(cw->outputFile, retAddrLabel);
+
+    free(retAddrLabel);
+    retAddrLabel = NULL;
+    return OK;
+}
+
+static ErrorCode codeWriter_writeReturn(CodeWriter* cw, const Command* cmd)
+{
+    fprintf(cw->outputFile, "// return\n");
+
+    // Move return value into the position of Argument 0 in the stack
+    // At this point, the return value must be at the top of the stack
+    // @SP
+    // A=M-1
+    // D=M  // pop()
+    // @ARG
+    // A=M
+    // M=D
+    fprintf(cw->outputFile, "    @SP\n    A=M-1\n    D=M\n    @ARG\n    A=M\n    M=D\n");
+
+    // Update the stack pointer right after return value 
+    // (1 plus the position of Argument 0)
+    fprintf(cw->outputFile, "    @ARG\n    D=M+1\n    @SP\n    M=D\n");
+
+    // Save return address into a temporary variable, as now LCL points to the
+    // end of frame, but LCL will soon be overwriten with its old value
+    fprintf(cw->outputFile, "    @LCL\n    D=M\n    @5\n   A=D-A\n    D=M\n    @R13\n    M=D\n");
+
+    // Return the caller's frame (pointer variables)
+    // required operation is e.g. *THIS = *(*LCL - 2)
+    // which we can do as
+    // @LCL
+    // D=M    // D = RAM[1] = *LCL
+    // @2
+    // A=D-A  // A = RAM[1] - 2
+    // D=M    // D = RAM[ RAM[1] - 2]
+    // @THIS
+    // M=D
+    fprintf(cw->outputFile, "    @LCL\n    D=M\n    @1\n    A=D-A\n    D=M\n    @THAT\n    M=D\n");
+    fprintf(cw->outputFile, "    @LCL\n    D=M\n    @2\n    A=D-A\n    D=M\n    @THIS\n    M=D\n");
+    fprintf(cw->outputFile, "    @LCL\n    D=M\n    @3\n    A=D-A\n    D=M\n    @ARG\n    M=D\n");
+    fprintf(cw->outputFile, "    @LCL\n    D=M\n    @4\n    A=D-A\n    D=M\n    @LCL\n    M=D\n");
+
+    // Retrieve return address from the stack and go to it
+    fprintf(cw->outputFile, "    @R13\n    A=M\n");
+    fprintf(cw->outputFile, "    0; JMP\n");
     return OK;
 }
 
