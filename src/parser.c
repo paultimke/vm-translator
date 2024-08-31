@@ -153,15 +153,13 @@ ErrorCode parser_advance(Parser* p)
 }
 
 // -------------------------- PRIVATE FUNCTIONS ----------------------------- //
+
+/// @brief This function assumes only .vm files will be passed, as that
+/// should be checked before calling parser_new()
 static ErrorCode readInputFile(Parser* p, const char* fileName)
 {
     char* buffer;
     buffer = NULL;
-
-    if (strcmp(fileName + strlen(fileName) - strlen(".vm"), ".vm") != 0) {
-        logError(ERR_FILENAME_NOT_VM, NULL);
-        return ERR_FILENAME_NOT_VM;
-    }
 
     FILE* f = fopen(fileName, "rb");
     if (!f) {

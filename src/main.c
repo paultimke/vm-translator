@@ -41,10 +41,12 @@ int main(int argc, char* argv[])
     switch (getFileType(path)) {
         case FILE_REGULAR:
             EXIT_ON_ERR(codeWriter_new(&codeWriter, path, FILE_REGULAR));
+            EXIT_ON_ERR(codeWriter_writeStartupCode(&codeWriter));
             EXIT_ON_ERR(processFile(path));
             break;
         case FILE_DIR:
             EXIT_ON_ERR(codeWriter_new(&codeWriter, path, FILE_DIR));
+            EXIT_ON_ERR(codeWriter_writeStartupCode(&codeWriter));
             EXIT_ON_ERR(processDirectory(path));
             break;
         default:
@@ -98,14 +100,16 @@ static ErrorCode processDirectory(const char* dirName)
 
         if ( ( stbuf.st_mode & S_IFMT ) == S_IFDIR )
         {
-            continue;
             // Skip directories
+            continue;
         }
         else
         {
-            // Files found
-            printf("Processing %s\n", fileName);
-            RETURN_ON_ERR(processFile(fileName));
+            // Only process files with .vm extension
+            if (strcmp(fileName + strlen(fileName) - strlen(".vm"), ".vm") == 0) {
+                printf("Processing %s\n", fileName);
+                RETURN_ON_ERR(processFile(fileName));
+            }
         }
     }
 
@@ -115,6 +119,7 @@ static ErrorCode processDirectory(const char* dirName)
 static ErrorCode processFile(const char* fileName)
 {
     RETURN_ON_ERR(parser_new(&parser, fileName));
+    RETURN_ON_ERR(codeWriter_setCurrentFileName(&codeWriter, fileName));
 
     while (parser_hasMoreCommands(&parser)) {
         RETURN_ON_ERR(parser_advance(&parser));
